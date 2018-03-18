@@ -1,0 +1,41 @@
+---
+meta:
+  lab:
+    range:   10.192.0.0/16
+    gateway: 10.192.0.1
+    cloud_properties:
+      name: lab-net1
+
+environments:
+  - name: lab-proto
+    networking:
+      - range:   10.192.0.0/16
+        gateway: 10.192.0.1
+        cloud_properties:
+          name: lab-net1
+
+        limit: 10.192.0.0/24
+        layout: bestfit
+        networks:
+          - { name: bosh,         net: /30, static: 1 }
+          - { name: vault,        net: /30 }
+          - { name: concourse,    net: /28, static: 3 }
+          - { name: shield,       net: /29, static: 1 }
+          - { name: bolo,         net: /30, static: 1 }
+
+  - name: lab-sandbox
+    networking:
+      - range:   10.192.0.0/16
+        gateway: 10.192.0.1
+        cloud_properties:
+          name: lab-net1
+
+        limit: 10.192.1.0/24
+        layout: bestfit
+        networks:
+          - { name: bosh,         net: /30, static: 1 }
+          - { name: jumpbox,      net: /30, static: 1 }
+          - { name: cf-edge,      net: /28, static: 4 }
+          - { name: cf-core,      net: /27 }
+          - { name: cf-runtime,   net: /25 }
+          - { name: cf-services,  net: /26 }

@@ -1,0 +1,166 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+use JSON qw/from_json to_json/;
+use Getopt::Long;
+
+my $MASKS = {
+	'30' => 0xfffffffc,
+	'29' => 0xfffffff8,
+	'28' => 0xfffffff0,
+	'27' => 0xffffffe0,
+	'26' => 0xffffffc0,
+	'25' => 0xffffff80,
+	'24' => 0xffffff00,
+	'23' => 0xfffffe00,
+	'22' => 0xfffffc00,
+	'21' => 0xfffff800,
+	'20' => 0xfffff000,
+	'19' => 0xffffe000,
+	'18' => 0xffffc000,
+	'17' => 0xffff8000,
+	'16' => 0xffff0000,
+	'15' => 0xfffe0000,
+	'14' => 0xfff80000,
+	'13' => 0xfffc0000,
+	'12' => 0xfff00000,
+	'11' => 0xffe00000,
+	'10' => 0xff800000,
+	 '9' => 0xffc00000,
+	 '8' => 0xff000000,
+};
+
+sub usage {
+	my ($rc) = @_;
+	print "cc-me - A Cloud-Config Generator\n";
+	print "USAGE: $0 <(spruce merge lab.yml | spruce json)\n";
+	exit $rc;
+}
+
+my %opts;
+GetOptions(\%opts, qw/
+	help|h
+/) or usage(1);
+usage(0) if $opts{help};
+
+my $plan = from_json(do { local $/; <> })
+	or die "Failed to read input plan: $!\n";
+
+for my $env (@{$plan->{environments}}) {
+	my @cc;
+	push @cc, "---";
+	push @cc, "# cloud-config for $env->{name}";
+	push @cc, "# this cloud-config proudly generated with cc-me!";
+	push @cc, "# (https://github.com/jhunt/cc-me)";
+	push @cc, "";
+	push @cc, "networks:";
+
+	for my $subnet (@{$env->{networking}}) {
+		my ($alpha, $omega) = iprange($subnet->{range});
+		my ($start, $end)   = iprange($subnet->{limit});
+		my $last = $start;
+
+		# real networks reserve the net address (first)
+		# and broadcast (last)
+		$alpha = nextip($alpha);
+		$omega = previp($omega);
+
+		($_->{bits} = $_->{net}) =~ s|^/|| for @{$subnet->{networks}};
+		my @nets = @{$subnet->{networks}};
+		if ($subnet->{layout} ne 'strict') {
+			@nets = sort {
+				$a->{bits} == $b->{bits} ? $a->{name} cmp $b->{name}
+				                         : $b->{bits} <=> $a->{bits}
+			} @nets;
+		}
+		for my $net (@nets) {
+			my ($a, $b) = iprange($start, $net->{bits});
+			if (ip2num($a) <= ip2num($last) && $last ne $start) {
+				($a, $b) = iprange(nextip($b), $net->{bits});
+			}
+
+			my $n = 2 ** (32 - $net->{bits});
+
+			# in case we've bumped up against the edges of the outer net...
+			if ($a eq $alpha) {
+				$a = nextip($a);
+				$n--;
+			}
+			if ($b eq $omega) {
+				$b = previp($b);
+				$n--;
+			}
+
+			push @cc, "  # $a/$net->{bits}    ($n hosts)    $a - $b";
+			push @cc, "  - name: $net->{name}";
+			push @cc, "    type: manual";
+			push @cc, "    subnets:";
+
+			push @cc, "      - range:   $subnet->{range}";
+			push @cc, "        gateway: $subnet->{gateway}";
+			push @cc, "        az: ".to_json($subnet->{azs} || []);
+			push @cc, "        cloud_properties: ".to_json($subnet->{cloud_properties} || {});
+			push @cc, "        reserved:";
+			push @cc, "          - $_" for @{$subnet->{reserved} || []};
+			push @cc, "          - $alpha - ".previp($a);
+			push @cc, "          - ".nextip($b)." - $omega";
+
+			my $nstatic = $net->{static} || '0';
+			if ($nstatic =~ m/^(\d+)%$/) {
+				$nstatic = int(($1 / 100.0) * $n + 0.5);
+			} elsif ($nstatic =~ m{^(\d+)/(\d+)$}) {
+				$nstatic = int(($1 / $2) * $n + 0.5);
+			}
+			if ($nstatic+0) {
+				push @cc, "        static: # $net->{static} ($nstatic)";
+				push @cc, "          - $a - ".(num2ip(ip2num($a) + $nstatic));
+			} else {
+				push @cc, "        static: []";
+			}
+			push @cc, "";
+
+			$last = $b;
+			$start = nextip($b);
+		}
+	}
+	push @cc, "";
+	for my $t (grep { $_ ne 'name' && $_ ne 'networking' } keys %$env) {
+		push @cc, "$t: ".to_json($env->{$t});
+	}
+	push @cc, "";
+
+	print ">> writing $env->{name}.yml cloud-config...\n";
+	open my $fh, ">", "$env->{name}.yml"
+		or die "Failed to open $env->{name}.yml for writing: $!\n";
+	print $fh "$_\n" for @cc;
+	close $fh;
+}
+
+
+sub ip2num {
+	unpack N => pack CCCC => split /\./ => shift
+}
+
+sub num2ip {
+	join '.', unpack 'C4', pack 'N', shift
+}
+
+sub previp {
+	num2ip(ip2num(shift) - 1);
+}
+
+sub nextip {
+	num2ip(ip2num(shift) + 1);
+}
+
+sub iprange {
+	my ($ip, $mask) = @_;
+	($ip, $mask) = split '/', $ip unless $mask;
+
+	$mask = $MASKS->{$mask}
+		or die "cc-me only supports /8 - /30 networks, inclusive\n";
+
+	return num2ip(ip2num($ip) &  $mask),
+	       num2ip(ip2num($ip) | ~$mask);
+}

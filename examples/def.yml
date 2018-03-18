@@ -1,0 +1,110 @@
+meta:
+  network:
+    azs: [z1]
+    range: 10.128.0.0/10
+    gateway: 10.128.0.1
+    reserved:
+      - 10.128.0.2 # ESXi
+      - 10.128.0.3 # vSphere
+    cloud_properties:
+      name: VM Network
+
+  lab:
+    azs: [z1]
+    range: 10.200.128.0.0/17
+    gateway: 10.200.128.1
+    cloud_properties:
+      name: VMNetwork
+
+  azs:
+    - name: z1
+      cloud_properties:
+        data_centers:
+          - name: Buffalo-Lab
+            clusters:
+              - cluster1: {}
+
+  disk_types:
+    - { name: default,   disk_size: 2048  }
+    - { name: consul,    disk_size: 2048  }
+    - { name: concourse, disk_size: 10240 }
+    - { name: postgres,  disk_size: 4096  }
+    - { name: blobstore, disk_size: 4096  }
+    - { name: vault,     disk_size: 1024  }
+    - { name: bosh,      disk_size: 16384 }
+    - { name: shield,    disk_size: 2048  }
+
+  vm_types:
+    - name: default
+      cloud_properties: { cpu: 1, ram: 2048, disk: 2048 }
+    - name: small
+      cloud_properties: { cpu: 1, ram: 1024, disk: 2048 }
+    - name: medium
+      cloud_properties: { cpu: 1, ram: 2048, disk: 4096 }
+    - name: large
+      cloud_properties: { cpu: 1, ram: 2048, disk: 8192 }
+    - name: runtime
+      cloud_properties: { cpu: 1, ram: 4096, disk: 40960 }
+    - name: blacksmith
+      cloud_properties: { cpu: 1, ram: 2048, disk: 10240 }
+
+  vm_extensions:
+    # for CF
+    - name: cf-elb
+    - name: ssh-elb
+    - name: 100GB_ephemeral_disk
+    - name: 50GB_ephemeral_disk
+
+  compilation:
+    workers: 5
+    reuse_compilation_vms: true
+    az: z1
+    vm_type: large
+    network: compilation
+
+environments:
+  - name: demo
+    azs:           (( grab meta.azs ))
+    disk_types:    (( grab meta.disk_types ))
+    vm_types:      (( grab meta.vm_types ))
+    vm_extensions: (( grab meta.vm_extensions ))
+    compilation:   (( grab meta.compilation ))
+    networking:
+      - .: (( inject meta.lab ))
+        limit: 10.200.219.0/24
+        layout: bestfit
+        networks:
+          - { name: bosh,      net: /30, static: 1 }
+          - { name: vault,     net: /30 }
+          - { name: concourse, net: /28, static: 3 }
+          - { name: sandbox,   net: /27 }
+
+  - name:          hunt-lab-proto
+    azs:           (( grab meta.azs ))
+    disk_types:    (( grab meta.disk_types ))
+    vm_types:      (( grab meta.vm_types ))
+    vm_extensions: (( grab meta.vm_extensions ))
+    compilation:   (( grab meta.compilation ))
+    networking:
+      - .: (( inject meta.network ))
+        limit: 10.128.4.0/23
+        layout: bestfit
+        networks:
+          - { name: cf-edge, net: /29, static: 4 }
+          - { name: cf-db,   net: /29, static: 4 }
+          - { name: cf-core, net: /24, static: 1/20 }
+
+  - name:          hunt-lab-prod
+    azs:           (( grab meta.azs ))
+    disk_types:    (( grab meta.disk_types ))
+    vm_types:      (( grab meta.vm_types ))
+    vm_extensions: (( grab meta.vm_extensions ))
+    compilation:   (( grab meta.compilation ))
+    networking:
+      - .: (( inject meta.network ))
+        limit: 10.128.8.0/21
+        layout: strict
+        networks:
+          - { name: cf-edge, net: /29, static: 4 }
+          - { name: cf-core, net: /24, static: 5% }
+          - { name: cf-db,   net: /29, static: 4 }

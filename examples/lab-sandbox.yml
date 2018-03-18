@@ -1,0 +1,89 @@
+---
+# cloud-config for lab-sandbox
+# this cloud-config proudly generated with cc-me!
+# (https://github.com/jhunt/cc-me)
+
+networks:
+  # 10.192.1.0/30    (4 hosts)    10.192.1.0 - 10.192.1.3
+  - name: bosh
+    type: manual
+    subnets:
+      - range:   10.192.0.0/16
+        gateway: 10.192.0.1
+        az: []
+        cloud_properties: {"name":"lab-net1"}
+        reserved:
+          - 10.192.0.1 - 10.192.0.255
+          - 10.192.1.4 - 10.192.255.254
+        static: # 1 (1)
+          - 10.192.1.0 - 10.192.1.1
+
+  # 10.192.1.4/30    (4 hosts)    10.192.1.4 - 10.192.1.7
+  - name: jumpbox
+    type: manual
+    subnets:
+      - range:   10.192.0.0/16
+        gateway: 10.192.0.1
+        az: []
+        cloud_properties: {"name":"lab-net1"}
+        reserved:
+          - 10.192.0.1 - 10.192.1.3
+          - 10.192.1.8 - 10.192.255.254
+        static: # 1 (1)
+          - 10.192.1.4 - 10.192.1.5
+
+  # 10.192.1.16/28    (16 hosts)    10.192.1.16 - 10.192.1.31
+  - name: cf-edge
+    type: manual
+    subnets:
+      - range:   10.192.0.0/16
+        gateway: 10.192.0.1
+        az: []
+        cloud_properties: {"name":"lab-net1"}
+        reserved:
+          - 10.192.0.1 - 10.192.1.15
+          - 10.192.1.32 - 10.192.255.254
+        static: # 4 (4)
+          - 10.192.1.16 - 10.192.1.20
+
+  # 10.192.1.32/27    (32 hosts)    10.192.1.32 - 10.192.1.63
+  - name: cf-core
+    type: manual
+    subnets:
+      - range:   10.192.0.0/16
+        gateway: 10.192.0.1
+        az: []
+        cloud_properties: {"name":"lab-net1"}
+        reserved:
+          - 10.192.0.1 - 10.192.1.31
+          - 10.192.1.64 - 10.192.255.254
+        static: []
+
+  # 10.192.1.64/26    (64 hosts)    10.192.1.64 - 10.192.1.127
+  - name: cf-services
+    type: manual
+    subnets:
+      - range:   10.192.0.0/16
+        gateway: 10.192.0.1
+        az: []
+        cloud_properties: {"name":"lab-net1"}
+        reserved:
+          - 10.192.0.1 - 10.192.1.63
+          - 10.192.1.128 - 10.192.255.254
+        static: []
+
+  # 10.192.1.128/25    (128 hosts)    10.192.1.128 - 10.192.1.255
+  - name: cf-runtime
+    type: manual
+    subnets:
+      - range:   10.192.0.0/16
+        gateway: 10.192.0.1
+        az: []
+        cloud_properties: {"name":"lab-net1"}
+        reserved:
+          - 10.192.0.1 - 10.192.1.127
+          - 10.192.2.0 - 10.192.255.254
+        static: []
+
+
+
