@@ -85,11 +85,27 @@ $ spruce merge example.yml | spruce json | ./cc-me
 It couldn't be any easier.  The two cloud-configs have the
 correct, non-overlapping network ranges defined, with the
 appropriate reservations and static IP address allocations!
+
 The `bestfit` layout even re-orders the networks to acheive the
 most efficient IP distribution possible.  If you run this, take
 note of the fact that in `lab-sandbox.yml`, the `cf-runtime`
 network is actually last, after all the smaller networks, since it
 eats up half of the available address space.
+
+If you need to maintain cohesion with pre-existing cloud-configs,
+you can use `layout: strict`, and cc-me will *NOT* reorder the
+networks to pack the most efficiency.  If you need gaps in the
+ranges, you can specify your network name as `SKIP`, and cc-me
+will go through the motions of allocating the network range, but
+_not_ emit the configuration to the cloud-config.
+
+For each network you define under `networks:`, you can specify how
+many static IP address you will need (if any).  If you set a
+number, i.e. `static: 5`, you will get that many static IPs.  You
+can also specify a percentage, which will be calculated according
+to the usable IPs in the network range.  You can also specify
+percentages as a fraction, like 1/5, to capture "one for every X"
+semantics.
 
 All environment-level YAML/JSON keys (aside from `networking` and
 `name`) will be passed through as-is to the generated
