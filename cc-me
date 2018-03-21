@@ -108,7 +108,7 @@ for my $env (@{$plan->{environments}}) {
 				push @cc, "        reserved:";
 				push @cc, "          - $_" for @{$subnet->{reserved} || []};
 				push @cc, "          - $alpha - ".previp($a);
-				push @cc, "          - ".nextip($b)." - $omega";
+				push @cc, "          - ".nextip($b)." - $omega" unless ip2num(nextip($b)) > ip2num($omega);
 
 				my $nstatic = $net->{static} || '0';
 				if ($nstatic =~ m/^(\d+)%$/) {
