@@ -125,7 +125,7 @@ for my $env (@{$plan->{environments}}) {
 		}
 	}
 	push @cc, "";
-	for my $t (grep { $_ ne 'name' && $_ ne 'networking' } keys %$env) {
+	for my $t (sort grep { $_ ne 'name' && $_ ne 'networking' } keys %$env) {
 		push @cc, "$t: ".to_json($env->{$t});
 	}
 	push @cc, "";
