@@ -103,6 +103,7 @@ for my $env (@{$plan->{environments}}) {
 				push @cc, "      - range:   $subnet->{range}";
 				push @cc, "        gateway: $subnet->{gateway}";
 				push @cc, "        azs: ".to_json($subnet->{azs} || []);
+				push @cc, "        dns: ".to_json($subnet->{dns} || []);
 				push @cc, "        cloud_properties: ".to_json($subnet->{cloud_properties} || {});
 				push @cc, "        reserved:";
 				push @cc, "          - $_" for @{$subnet->{reserved} || []};
