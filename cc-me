@@ -92,33 +92,37 @@ for my $env (@{$plan->{environments}}) {
 				$n--;
 			}
 
-			push @cc, "  # $a/$net->{bits}    ($n hosts)    $a - $b";
-			push @cc, "  - name: $net->{name}";
-			push @cc, "    type: manual";
-			push @cc, "    subnets:";
+			# for SKIP networks, just calculate the network ranges
+			# we would have used, but don't actually emit a block.
+			if ($net->{name} ne 'SKIP') {
+				push @cc, "  # $a/$net->{bits}    ($n hosts)    $a - $b";
+				push @cc, "  - name: $net->{name}";
+				push @cc, "    type: manual";
+				push @cc, "    subnets:";
 
-			push @cc, "      - range:   $subnet->{range}";
-			push @cc, "        gateway: $subnet->{gateway}";
-			push @cc, "        azs: ".to_json($subnet->{azs} || []);
-			push @cc, "        cloud_properties: ".to_json($subnet->{cloud_properties} || {});
-			push @cc, "        reserved:";
-			push @cc, "          - $_" for @{$subnet->{reserved} || []};
-			push @cc, "          - $alpha - ".previp($a);
-			push @cc, "          - ".nextip($b)." - $omega";
+				push @cc, "      - range:   $subnet->{range}";
+				push @cc, "        gateway: $subnet->{gateway}";
+				push @cc, "        azs: ".to_json($subnet->{azs} || []);
+				push @cc, "        cloud_properties: ".to_json($subnet->{cloud_properties} || {});
+				push @cc, "        reserved:";
+				push @cc, "          - $_" for @{$subnet->{reserved} || []};
+				push @cc, "          - $alpha - ".previp($a);
+				push @cc, "          - ".nextip($b)." - $omega";
 
-			my $nstatic = $net->{static} || '0';
-			if ($nstatic =~ m/^(\d+)%$/) {
-				$nstatic = int(($1 / 100.0) * $n + 0.5);
-			} elsif ($nstatic =~ m{^(\d+)/(\d+)$}) {
-				$nstatic = int(($1 / $2) * $n + 0.5);
+				my $nstatic = $net->{static} || '0';
+				if ($nstatic =~ m/^(\d+)%$/) {
+					$nstatic = int(($1 / 100.0) * $n + 0.5);
+				} elsif ($nstatic =~ m{^(\d+)/(\d+)$}) {
+					$nstatic = int(($1 / $2) * $n + 0.5);
+				}
+				if ($nstatic+0) {
+					push @cc, "        static: # $net->{static} ($nstatic)";
+					push @cc, "          - $a - ".(num2ip(ip2num($a) + $nstatic));
+				} else {
+					push @cc, "        static: []";
+				}
+				push @cc, "";
 			}
-			if ($nstatic+0) {
-				push @cc, "        static: # $net->{static} ($nstatic)";
-				push @cc, "          - $a - ".(num2ip(ip2num($a) + $nstatic));
-			} else {
-				push @cc, "        static: []";
-			}
-			push @cc, "";
 
 			$last = $b;
 			$start = nextip($b);
