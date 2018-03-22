@@ -3,17 +3,16 @@ meta:
   lab:
     range:   10.192.0.0/16
     gateway: 10.192.0.1
+    dns:
+      - 10.0.0.1
+      - 10.128.0.1
     cloud_properties:
       name: lab-net1
 
 environments:
   - name: lab-proto
     networking:
-      - range:   10.192.0.0/16
-        gateway: 10.192.0.1
-        cloud_properties:
-          name: lab-net1
-
+      - .: (( inject meta.lab ))
         limit: 10.192.0.0/24
         layout: bestfit
         networks:
@@ -25,11 +24,7 @@ environments:
 
   - name: lab-sandbox
     networking:
-      - range:   10.192.0.0/16
-        gateway: 10.192.0.1
-        cloud_properties:
-          name: lab-net1
-
+      - .: (( inject meta.lab ))
         limit: 10.192.1.0/24
         layout: bestfit
         networks:

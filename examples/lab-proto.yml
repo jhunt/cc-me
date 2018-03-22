@@ -10,7 +10,8 @@ networks:
     subnets:
       - range:   10.192.0.0/16
         gateway: 10.192.0.1
-        az: []
+        azs: []
+        dns: ["10.0.0.1","10.128.0.1"]
         cloud_properties: {"name":"lab-net1"}
         reserved:
           - 10.192.0.1 - 10.191.255.255
@@ -24,7 +25,8 @@ networks:
     subnets:
       - range:   10.192.0.0/16
         gateway: 10.192.0.1
-        az: []
+        azs: []
+        dns: ["10.0.0.1","10.128.0.1"]
         cloud_properties: {"name":"lab-net1"}
         reserved:
           - 10.192.0.1 - 10.192.0.3
@@ -38,7 +40,8 @@ networks:
     subnets:
       - range:   10.192.0.0/16
         gateway: 10.192.0.1
-        az: []
+        azs: []
+        dns: ["10.0.0.1","10.128.0.1"]
         cloud_properties: {"name":"lab-net1"}
         reserved:
           - 10.192.0.1 - 10.192.0.7
@@ -51,7 +54,8 @@ networks:
     subnets:
       - range:   10.192.0.0/16
         gateway: 10.192.0.1
-        az: []
+        azs: []
+        dns: ["10.0.0.1","10.128.0.1"]
         cloud_properties: {"name":"lab-net1"}
         reserved:
           - 10.192.0.1 - 10.192.0.15
@@ -65,7 +69,8 @@ networks:
     subnets:
       - range:   10.192.0.0/16
         gateway: 10.192.0.1
-        az: []
+        azs: []
+        dns: ["10.0.0.1","10.128.0.1"]
         cloud_properties: {"name":"lab-net1"}
         reserved:
           - 10.192.0.1 - 10.192.0.31
