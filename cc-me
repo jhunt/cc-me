@@ -116,9 +116,12 @@ for my $env (@{$plan->{environments}}) {
 				} elsif ($nstatic =~ m{^(\d+)/(\d+)$}) {
 					$nstatic = int(($1 / $2) * $n + 0.5);
 				}
-				if ($nstatic+0) {
+				if ($nstatic+0 > 1) {
 					push @cc, "        static: # $net->{static} ($nstatic)";
-					push @cc, "          - $a - ".(num2ip(ip2num($a) + $nstatic));
+					push @cc, "          - $a - ".(num2ip(ip2num($a) + $nstatic - 1));
+				} elsif ($nstatic+0) {
+					push @cc, "        static: # $net->{static} ($nstatic)";
+					push @cc, "          - $a";
 				} else {
 					push @cc, "        static: []";
 				}
