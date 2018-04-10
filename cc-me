@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 
-use JSON qw/from_json to_json/;
+use JSON::PP qw/decode_json encode_json/;
 use Getopt::Long;
 
 my $MASKS = {
@@ -38,13 +38,23 @@ sub usage {
 	exit $rc;
 }
 
+my $json_sort = sub {
+	return
+		# name first
+		(($JSON::PP::b eq 'name' || 0) <=> ($JSON::PP::a eq 'name' || 0))
+		# everything else alphabetical
+		|| ($JSON::PP::a cmp $JSON::PP::b);
+};
+my $json    = JSON::PP->new->canonical->space_after->allow_nonref->sort_by($json_sort);
+my $pp_json = JSON::PP->new->canonical->pretty->space_before(0)->allow_nonref->sort_by($json_sort);
+
 my %opts;
 GetOptions(\%opts, qw/
 	help|h
 /) or usage(1);
 usage(0) if $opts{help};
 
-my $plan = from_json(do { local $/; <> })
+my $plan = decode_json(do { local $/; <> })
 	or die "Failed to read input plan: $!\n";
 
 for my $env (@{$plan->{environments}}) {
@@ -102,9 +112,9 @@ for my $env (@{$plan->{environments}}) {
 
 				push @cc, "      - range:   $subnet->{range}";
 				push @cc, "        gateway: $subnet->{gateway}";
-				push @cc, "        azs: ".to_json($subnet->{azs} || []);
-				push @cc, "        dns: ".to_json($subnet->{dns} || []);
-				push @cc, "        cloud_properties: ".to_json($subnet->{cloud_properties} || {});
+				push @cc, "        azs: ".encode_json($subnet->{azs} || []);
+				push @cc, "        dns: ".encode_json($subnet->{dns} || []);
+				push @cc, "        cloud_properties: ".encode_json($subnet->{cloud_properties} || {});
 				push @cc, "        reserved:";
 				push @cc, "          - $_" for @{$subnet->{reserved} || []};
 				push @cc, "          - $alpha - ".previp($a);
@@ -133,10 +143,17 @@ for my $env (@{$plan->{environments}}) {
 		}
 	}
 	push @cc, "";
+
 	for my $t (sort grep { $_ ne 'name' && $_ ne 'networking' } keys %$env) {
-		push @cc, "$t: ".to_json($env->{$t});
+		if (ref($env->{$t}) eq 'ARRAY') {
+			push @cc, "$t:", (map {"  - ".$json->encode($_)} (@{$env->{$t}})), '';
+		} elsif (ref($env->{$t}) eq 'HASH') {
+			my @lines = split /\n/, $pp_json->encode($env->{$t});
+			push @cc, "$t:", @lines[1..$#lines-1], '';
+		} else {
+			push @cc, "$t: ".$json->encode($env->{$t});
+		}
 	}
-	push @cc, "";
 
 	print ">> writing $env->{name}.yml cloud-config...\n";
 	open my $fh, ">", "$env->{name}.yml"
