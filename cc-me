@@ -149,7 +149,10 @@ for my $env (@{$plan->{environments}}) {
 			push @cc, "$t:", (map {"  - ".$json->encode($_)} (@{$env->{$t}})), '';
 		} elsif (ref($env->{$t}) eq 'HASH') {
 			my @lines = split /\n/, $pp_json->encode($env->{$t});
-			push @cc, "$t:", @lines[1..$#lines-1], '';
+			push @cc, "$t:", 
+			          map {my $l = $_; $l =~ s/(\s*)"([^"]+)": (.*?),?\s*$/$1$2: $3/s; $l}
+			              @lines[1..$#lines-1],
+			          '';
 		} else {
 			push @cc, "$t: ".$json->encode($env->{$t});
 		}
