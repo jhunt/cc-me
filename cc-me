@@ -93,11 +93,11 @@ for my $env (@{$plan->{environments}}) {
 			my $n = 2 ** (32 - $net->{bits});
 
 			# in case we've bumped up against the edges of the outer net...
-			if ($a eq $alpha) {
+			while (ip2num($a) <= ip2num($alpha)) {
 				$a = nextip($a);
 				$n--;
 			}
-			if ($b eq $omega) {
+			while (ip2num($a) >= ip2num($omega)) {
 				$b = previp($b);
 				$n--;
 			}
