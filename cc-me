@@ -92,14 +92,24 @@ for my $env (@{$plan->{environments}}) {
 				($a, $b) = iprange(nextip($b), $net->{bits});
 			}
 
+			if (ip2num($a) > ip2num($end)) {
+				push @errors, "network '$net->{name}' /$net->{bits} allocation exceeds available numbering space for $subnet->{limit}";
+				next;
+			}
+
 			my $n = 2 ** (32 - $net->{bits});
+			my $base = $a;
 
 			# in case we've bumped up against the edges of the outer net...
-			while (ip2num($a) <= ip2num($alpha)) {
+			while (ip2num($a) < ip2num($alpha)) {
 				$a = nextip($a);
 				$n--;
 			}
-			while (ip2num($a) >= ip2num($omega)) {
+			if ($a eq $subnet->{gateway}) {
+				$a = nextip($a);
+				$n--;
+			}
+			while (ip2num($b) > ip2num($omega)) {
 				$b = previp($b);
 				$n--;
 			}
@@ -107,7 +117,7 @@ for my $env (@{$plan->{environments}}) {
 			# for SKIP networks, just calculate the network ranges
 			# we would have used, but don't actually emit a block.
 			if ($net->{name} ne 'SKIP') {
-				push @cc, "  # $a/$net->{bits}    ($n hosts)    $a - $b";
+				push @cc, "  # $base/$net->{bits}    ($n hosts)    $a - $b";
 				push @cc, "  - name: $net->{name}";
 				push @cc, "    type: manual";
 				push @cc, "    subnets:";
@@ -119,7 +129,8 @@ for my $env (@{$plan->{environments}}) {
 				push @cc, "        cloud_properties: ".encode_json($subnet->{cloud_properties} || {});
 				push @cc, "        reserved:";
 				push @cc, "          - $_" for @{$subnet->{reserved} || []};
-				push @cc, "          - $alpha - ".previp($a);
+				push @cc, "          - $alpha - ".previp($a) if ip2num($alpha) < ip2num(previp($a));
+				push @cc, "          - $alpha"               if $alpha eq previp($a) and $alpha ne $subnet->{gateway};
 				push @cc, "          - ".nextip($b)." - $omega" unless ip2num(nextip($b)) > ip2num($omega);
 
 				my $nstatic = $net->{static} || '0';
