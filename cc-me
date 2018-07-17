@@ -66,6 +66,8 @@ for my $env (@{$plan->{environments}}) {
 	push @cc, "";
 	push @cc, "networks:";
 
+	my @errors;
+
 	for my $subnet (@{$env->{networking}}) {
 		my ($alpha, $omega) = iprange($subnet->{range});
 		my ($start, $end)   = iprange($subnet->{limit});
@@ -126,6 +128,9 @@ for my $env (@{$plan->{environments}}) {
 				} elsif ($nstatic =~ m{^(\d+)/(\d+)$}) {
 					$nstatic = int(($1 / $2) * $n + 0.5);
 				}
+				if ($nstatic > $n) {
+					push @errors, "network '$net->{name}' wants to allocate $nstatic static IPs, but there are only $n available in the whole subnet.";
+				}
 				if ($nstatic+0 > 1) {
 					push @cc, "        static: # $net->{static} ($nstatic)";
 					push @cc, "          - $a - ".(num2ip(ip2num($a) + $nstatic - 1));
@@ -156,6 +161,12 @@ for my $env (@{$plan->{environments}}) {
 		} else {
 			push @cc, "$t: ".$json->encode($env->{$t});
 		}
+	}
+
+	if (@errors) {
+		print STDERR "!!! ERRORS were encountered while compiling your cloud-config:\n";
+		print STDERR "      - $_\n" for @errors;
+		exit 1;
 	}
 
 	print ">> writing $env->{name}.yml cloud-config...\n";
